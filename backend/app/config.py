@@ -139,3 +139,22 @@ FRONTEND_URL = os.getenv(
     "FRONTEND_URL",
     "http://localhost:8081",
 )
+
+# =========================================================
+# GOOGLE OAUTH
+# =========================================================
+
+GOOGLE_CLIENT_ID = os.getenv(
+    "GOOGLE_CLIENT_ID",
+    "",
+)
+
+GOOGLE_CLIENT_SECRET = os.getenv(
+    "GOOGLE_CLIENT_SECRET",
+    "",
+)
+
+GOOGLE_CALLBACK_URL = os.getenv(
+    "GOOGLE_CALLBACK_URL",
+    "http://localhost:8000/auth/google/callback",
+)

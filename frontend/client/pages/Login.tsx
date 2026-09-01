@@ -660,9 +660,9 @@ export default function Login() {
   ========================================================= */
 
   const handleGoogleAuth = () => {
-    window.location.href =
-      "/api/auth/google";
-  };
+     window.location.href =
+    `${BACKEND_URL}/auth/google`;
+    };
 
   const handleAppleAuth = () => {
     window.location.href =

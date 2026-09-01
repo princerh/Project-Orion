@@ -106,6 +106,9 @@ const mockPlayers = [
     name: "Marcus Bontempelli",
     team: "Western Bulldogs",
     position: "Midfielder",
+    number: 4,
+    fieldX: 50,
+    fieldY: 49,
     kicks: 28,
     handballs: 12,
     marks: 8,
@@ -118,6 +121,9 @@ const mockPlayers = [
     name: "Dustin Martin",
     team: "Richmond",
     position: "Forward",
+    number: 4,
+    fieldX: 73,
+    fieldY: 27,
     kicks: 22,
     handballs: 8,
     marks: 6,
@@ -130,6 +136,9 @@ const mockPlayers = [
     name: "Patrick Dangerfield",
     team: "Geelong",
     position: "Midfielder",
+    number: 35,
+    fieldX: 28,
+    fieldY: 42,
     kicks: 25,
     handballs: 15,
     marks: 7,
@@ -142,6 +151,9 @@ const mockPlayers = [
     name: "Max Gawn",
     team: "Melbourne",
     position: "Ruckman",
+    number: 11,
+    fieldX: 50,
+    fieldY: 67,
     kicks: 18,
     handballs: 6,
     marks: 10,
@@ -1577,6 +1589,16 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
       (selectedTeam === "all" || player.team === selectedTeam),
   );
 
+  // Field display is intentionally search-driven:
+  // no player marker is shown until the user searches for a player.
+  const normalizedPlayerSearch = searchTerm.trim().toLowerCase();
+
+  const searchedFieldPlayers = normalizedPlayerSearch
+    ? mockPlayers.filter((player) =>
+        player.name.toLowerCase().includes(normalizedPlayerSearch),
+      )
+    : [];
+
   return (
   <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
     <MobileNavigation />
@@ -1810,7 +1832,10 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                             ? "border-blue-500 bg-blue-50"
                             : "border-gray-200 hover:border-gray-300"
                         }`}
-                        onClick={() => setSelectedPlayer(player)}
+                        onClick={() => {
+                          setSelectedPlayer(player);
+                          setSearchTerm(player.name);
+                        }}
                       >
                         <div className="font-medium">{player.name}</div>
                         <div className="text-sm text-gray-600">
@@ -1825,8 +1850,159 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                 </CardContent>
               </Card>
 
-              {/* Player Statistics */}
+              {/* Player Statistics + Search-Driven Field Position */}
               <div className="lg:w-2/3 space-y-6">
+                {/* Live AFL Field Position */}
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <MapPin className="h-5 w-5 text-green-600" />
+                          Live Field Position
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          Search for a player to view and highlight their current
+                          position on the field.
+                        </CardDescription>
+                      </div>
+
+                      {normalizedPlayerSearch &&
+                        searchedFieldPlayers.length > 0 && (
+                          <Badge
+                            variant="outline"
+                            className="w-fit border-green-200 bg-green-50 text-green-700"
+                          >
+                            {searchedFieldPlayers.length === 1
+                              ? `Showing: ${searchedFieldPlayers[0].name}`
+                              : `${searchedFieldPlayers.length} matching players`}
+                          </Badge>
+                        )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="relative mx-auto aspect-[1.55/1] w-full max-w-4xl overflow-hidden rounded-[46%] border-[5px] border-green-800 bg-gradient-to-b from-green-500 via-green-600 to-green-700 shadow-inner">
+                      {/* Alternating grass stripes */}
+                      <div className="absolute inset-0 grid grid-cols-10 opacity-30">
+                        {Array.from({ length: 10 }).map((_, index) => (
+                          <div
+                            key={index}
+                            className={
+                              index % 2 === 0
+                                ? "bg-white/10"
+                                : "bg-black/5"
+                            }
+                          />
+                        ))}
+                      </div>
+
+                      {/* Boundary line */}
+                      <div className="absolute inset-[3%] rounded-[46%] border-2 border-white/90" />
+
+                      {/* Centre square */}
+                      <div className="absolute left-1/2 top-1/2 h-[31%] w-[26%] -translate-x-1/2 -translate-y-1/2 border-2 border-white/90" />
+
+                      {/* Centre circle */}
+                      <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/90 sm:h-14 sm:w-14 lg:h-16 lg:w-16" />
+
+                      {/* 50 metre arcs */}
+                      <div className="absolute left-1/2 top-[4%] h-[32%] w-[58%] -translate-x-1/2 rounded-b-[50%] border-b-2 border-l-2 border-r-2 border-white/90" />
+                      <div className="absolute bottom-[4%] left-1/2 h-[32%] w-[58%] -translate-x-1/2 rounded-t-[50%] border-l-2 border-r-2 border-t-2 border-white/90" />
+
+                      {/* Goal squares */}
+                      <div className="absolute left-1/2 top-[3%] h-[13%] w-[20%] -translate-x-1/2 border-2 border-t-0 border-white/90" />
+                      <div className="absolute bottom-[3%] left-1/2 h-[13%] w-[20%] -translate-x-1/2 border-2 border-b-0 border-white/90" />
+
+                      {/* Top goal posts */}
+                      <div className="absolute left-1/2 top-0 flex -translate-x-1/2 gap-2 sm:gap-3">
+                        <div className="h-5 w-0.5 bg-white sm:h-7 sm:w-1" />
+                        <div className="h-7 w-0.5 bg-white sm:h-9 sm:w-1" />
+                        <div className="h-7 w-0.5 bg-white sm:h-9 sm:w-1" />
+                        <div className="h-5 w-0.5 bg-white sm:h-7 sm:w-1" />
+                      </div>
+
+                      {/* Bottom goal posts */}
+                      <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-end gap-2 sm:gap-3">
+                        <div className="h-5 w-0.5 bg-white sm:h-7 sm:w-1" />
+                        <div className="h-7 w-0.5 bg-white sm:h-9 sm:w-1" />
+                        <div className="h-7 w-0.5 bg-white sm:h-9 sm:w-1" />
+                        <div className="h-5 w-0.5 bg-white sm:h-7 sm:w-1" />
+                      </div>
+
+                      {/* No search yet */}
+                      {!normalizedPlayerSearch && (
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-4">
+                          <div className="rounded-lg bg-black/55 px-4 py-2 text-center text-xs font-medium text-white shadow-lg backdrop-blur-sm sm:text-sm">
+                            Search for a player to view their field position
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Search did not match any player */}
+                      {normalizedPlayerSearch &&
+                        searchedFieldPlayers.length === 0 && (
+                          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-4">
+                            <div className="rounded-lg bg-black/55 px-4 py-2 text-center text-xs font-medium text-white shadow-lg backdrop-blur-sm sm:text-sm">
+                              No matching player found
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Only searched players are rendered on the field */}
+                      {normalizedPlayerSearch &&
+                        searchedFieldPlayers.map((player) => (
+                          <div
+                            key={player.id}
+                            className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
+                            style={{
+                              left: `${player.fieldX}%`,
+                              top: `${player.fieldY}%`,
+                            }}
+                          >
+                            {/* Animated outer glow */}
+                            <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-yellow-300/60 sm:h-16 sm:w-16" />
+
+                            {/* Soft glow */}
+                            <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300/40 blur-md sm:h-16 sm:w-16" />
+
+                            {/* Player marker */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPlayer(player)}
+                              title={`${player.name} - ${player.team} - ${player.position}`}
+                              className="relative flex h-9 w-9 scale-125 items-center justify-center rounded-full border-2 border-yellow-200 bg-yellow-400 text-xs font-bold text-gray-950 shadow-lg ring-4 ring-yellow-300/40 transition-all duration-300 hover:scale-[1.35] sm:h-10 sm:w-10 lg:h-11 lg:w-11"
+                            >
+                              {player.number}
+                            </button>
+
+                            {/* Player name */}
+                            <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-yellow-400 px-2 py-1 text-[10px] font-semibold text-gray-950 shadow-md sm:text-xs">
+                              {player.name}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span className="h-3 w-3 rounded-full bg-yellow-400" />
+                        Searched Player
+                      </div>
+
+                      {normalizedPlayerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchTerm("")}
+                          className="font-medium text-green-700 transition-colors hover:text-green-800 hover:underline"
+                        >
+                          Clear field highlight
+                        </button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">

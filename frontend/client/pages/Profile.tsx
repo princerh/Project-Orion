@@ -314,7 +314,7 @@ export default function Profile() {
             </h1>
 
             <p className="mt-1 text-gray-600">
-              Manage your personal information and account role
+              Manage your personal information
             </p>
           </div>
 
@@ -435,39 +435,7 @@ export default function Profile() {
                   </p>
                 </div>
 
-                {/* Role */}
-                <div className="space-y-2">
-                  <Label>
-                    Account Role
-                  </Label>
-
-                  <Select
-                    value={role}
-                    onValueChange={setRole}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      <SelectItem value="player">
-                        Player
-                      </SelectItem>
-
-                      <SelectItem value="coach">
-                        Coach
-                      </SelectItem>
-
-                      <SelectItem value="analyst">
-                        Analyst
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <p className="text-xs text-gray-500">
-                    Select the role that best represents your use of AFL Analytics
-                  </p>
-                </div>
+                
               </div>
 
               <div className="border-t" />

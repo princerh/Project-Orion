@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MobileNavigation from "@/components/MobileNavigation";
 import { apiRequest } from "../lib/api";
+import { BACKEND_URL } from "../lib/config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -109,7 +110,7 @@ export default function AddPlayer() {
     setIsSaving(true);
 
     try {
-      await apiRequest("http://localhost:8000/players", {
+      await apiRequest(`${BACKEND_URL}/players`, {
         method: "POST",
         body: JSON.stringify({
           name: formData.name,

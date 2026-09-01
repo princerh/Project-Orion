@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { BACKEND_URL } from "@/lib/config";
 import {
   Select,
   SelectContent,
@@ -713,7 +714,7 @@ export default function PlayerPerformance() {
 
       const res =
         await fetch(
-          "http://localhost:8000/upload",
+          `${BACKEND_URL}/upload`,
           {
             method:
               "POST",
@@ -743,7 +744,7 @@ export default function PlayerPerformance() {
     async () => {
       const res =
         await fetch(
-          "http://localhost:8000/jobs?page=1&limit=10",
+          `${BACKEND_URL}/jobs?page=1&limit=10`,
           {
             headers: {
               Authorization:

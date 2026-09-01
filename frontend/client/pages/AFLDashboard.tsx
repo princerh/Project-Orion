@@ -82,8 +82,7 @@ import {
   Shield,
 } from "lucide-react";
 import MobileNavigation from "@/components/MobileNavigation";
-
-const BACKEND_URL = "http://localhost:8000";
+import { BACKEND_URL } from "@/lib/config";
 
 type BackendStatusResponse = {
   job_id: string;

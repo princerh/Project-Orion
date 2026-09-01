@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
+import { BACKEND_URL } from "@/lib/config";
 
 /* =========================================================
    AUTH HEADERS
@@ -155,10 +156,6 @@ export default function Login() {
     setIsLoading(true);
     setError("");
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1500),
-    );
-
     if (
       !loginForm.email ||
       !loginForm.password
@@ -171,32 +168,24 @@ export default function Login() {
       return;
     }
 
-    const storedUsers = JSON.parse(
-      localStorage.getItem(
-        "registeredUsers",
-      ) || "[]",
-    );
+    const email =
+      loginForm.email.trim().toLowerCase();
 
-    const allValidCredentials = [
-      ...validCredentials,
-      ...storedUsers,
-    ];
-
-    const matchedCredential =
-      allValidCredentials.find(
-        (cred: any) =>
+    const demoCredential =
+      validCredentials.find(
+        (cred) =>
           cred.email.toLowerCase() ===
-            loginForm.email.toLowerCase() &&
+            email &&
           cred.password ===
             loginForm.password,
       );
 
-    if (matchedCredential) {
-      /*
-       * Clear any previous OAuth profile
-       * information before starting a normal
-       * email-based login.
-       */
+    /*
+     * Keep the built-in demo accounts
+     * available without requiring database
+     * records in PostgreSQL.
+     */
+    if (demoCredential) {
       localStorage.removeItem(
         "userProfileImage",
       );
@@ -216,85 +205,64 @@ export default function Login() {
 
       localStorage.setItem(
         "userEmail",
-        loginForm.email,
+        email,
       );
 
       localStorage.setItem(
         "access_token",
-        "mock_access_token",
+        "demo_access_token",
+      );
+
+      localStorage.setItem(
+        "accessToken",
+        "demo_access_token",
+      );
+
+      localStorage.setItem(
+        "authToken",
+        "demo_access_token",
       );
 
       localStorage.setItem(
         "refresh_token",
-        "mock_refresh_token",
+        "demo_refresh_token",
       );
 
-      /*
-       * If this is a user created through
-       * the signup form, save their profile
-       * information as well.
-       */
-      if (
-        matchedCredential.firstName ||
-        matchedCredential.lastName
-      ) {
-        const fullName = [
-          matchedCredential.firstName,
-          matchedCredential.lastName,
-        ]
-          .filter(Boolean)
-          .join(" ");
+      localStorage.removeItem(
+        "userRole",
+      );
 
+      if (
+        email ===
+        "demo@aflanalytics.com"
+      ) {
         localStorage.setItem(
           "userName",
-          fullName,
+          "Demo User",
         );
-      } else {
-        /*
-         * Give demo accounts readable names.
-         */
-        const email =
-          loginForm.email.toLowerCase();
-
-        if (
-          email ===
-          "demo@aflanalytics.com"
-        ) {
-          localStorage.setItem(
-            "userName",
-            "Demo User",
-          );
-        } else if (
-          email ===
-          "admin@aflanalytics.com"
-        ) {
-          localStorage.setItem(
-            "userName",
-            "AFL Administrator",
-          );
-        } else if (
-          email ===
-          "coach@aflanalytics.com"
-        ) {
-          localStorage.setItem(
-            "userName",
-            "AFL Coach",
-          );
-        } else if (
-          email ===
-          "analyst@aflanalytics.com"
-        ) {
-          localStorage.setItem(
-            "userName",
-            "AFL Analyst",
-          );
-        }
-      }
-
-      if (matchedCredential.role) {
+      } else if (
+        email ===
+        "admin@aflanalytics.com"
+      ) {
         localStorage.setItem(
-          "userRole",
-          matchedCredential.role,
+          "userName",
+          "AFL Administrator",
+        );
+      } else if (
+        email ===
+        "coach@aflanalytics.com"
+      ) {
+        localStorage.setItem(
+          "userName",
+          "AFL Coach",
+        );
+      } else if (
+        email ===
+        "analyst@aflanalytics.com"
+      ) {
+        localStorage.setItem(
+          "userName",
+          "AFL Analyst",
         );
       }
 
@@ -304,13 +272,145 @@ export default function Login() {
           replace: true,
         },
       );
-    } else {
-      setError(
-        "Invalid email or password. Try demo@aflanalytics.com / demo123 or use your signup credentials",
-      );
+
+      setIsLoading(false);
+      return;
     }
 
-    setIsLoading(false);
+    /*
+     * Real email/password login.
+     * In production BACKEND_URL comes from
+     * VITE_BACKEND_URL on Vercel.
+     */
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            password:
+              loginForm.password,
+          }),
+        },
+      );
+
+      let data: any = {};
+
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+            data.message ||
+            "Invalid email or password",
+        );
+      }
+
+      if (
+        !data.access_token ||
+        !data.refresh_token ||
+        !data.user
+      ) {
+        throw new Error(
+          "The server returned an incomplete authentication response.",
+        );
+      }
+
+      localStorage.removeItem(
+        "userProfileImage",
+      );
+
+      localStorage.removeItem(
+        "oauthUser",
+      );
+
+      localStorage.removeItem(
+        "authProvider",
+      );
+
+      localStorage.setItem(
+        "isAuthenticated",
+        "true",
+      );
+
+      localStorage.setItem(
+        "userEmail",
+        data.user.email || email,
+      );
+
+      localStorage.setItem(
+        "access_token",
+        data.access_token,
+      );
+
+      /*
+       * Other parts of the existing frontend
+       * use these alternate token keys.
+       * Keep them synchronized.
+       */
+      localStorage.setItem(
+        "accessToken",
+        data.access_token,
+      );
+
+      localStorage.setItem(
+        "authToken",
+        data.access_token,
+      );
+
+      localStorage.setItem(
+        "refresh_token",
+        data.refresh_token,
+      );
+
+      if (data.user.username) {
+        localStorage.setItem(
+          "userName",
+          data.user.username,
+        );
+      } else {
+        localStorage.setItem(
+          "userName",
+          data.user.email || email,
+        );
+      }
+
+      if (data.user.role) {
+        localStorage.setItem(
+          "userRole",
+          data.user.role,
+        );
+      } else {
+        localStorage.removeItem(
+          "userRole",
+        );
+      }
+
+      navigate(
+        "/afl-dashboard",
+        {
+          replace: true,
+        },
+      );
+    } catch (loginError) {
+      const message =
+        loginError instanceof Error
+          ? loginError.message
+          : "Unable to login. Please try again.";
+
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   /* =========================================================
@@ -361,119 +461,175 @@ export default function Login() {
       return;
     }
 
-    const existingUsers = JSON.parse(
-      localStorage.getItem(
-        "registeredUsers",
-      ) || "[]",
-    );
+    const email =
+      signupForm.email.trim().toLowerCase();
 
-    const userExists =
-      existingUsers.some(
-        (user: any) =>
-          user.email.toLowerCase() ===
-          signupForm.email.toLowerCase(),
+    const username = [
+      signupForm.firstName.trim(),
+      signupForm.lastName.trim(),
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    try {
+      /*
+       * Create the user in the Railway
+       * FastAPI backend / PostgreSQL.
+       */
+      const response = await fetch(
+        `${BACKEND_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            username,
+            password:
+              signupForm.password,
+          }),
+        },
       );
 
-    if (userExists) {
-      setError(
-        "An account with this email already exists. Please login instead.",
-      );
+      let data: any = {};
 
-      setIsLoading(false);
-      return;
-    }
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, 2000),
-    );
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+            data.message ||
+            "Registration failed",
+        );
+      }
 
-    const newUser = {
-      email: signupForm.email,
-      password: signupForm.password,
-      firstName: signupForm.firstName,
-      lastName: signupForm.lastName,
-      organization:
-        signupForm.organization,
-      role: signupForm.role,
-    };
+      if (
+        !data.access_token ||
+        !data.refresh_token ||
+        !data.user
+      ) {
+        throw new Error(
+          "The server returned an incomplete authentication response.",
+        );
+      }
 
-    const updatedUsers = [
-      ...existingUsers,
-      newUser,
-    ];
-
-    localStorage.setItem(
-      "registeredUsers",
-      JSON.stringify(updatedUsers),
-    );
-
-    /* Authentication */
-
-    localStorage.setItem(
-      "isAuthenticated",
-      "true",
-    );
-
-    localStorage.setItem(
-      "userEmail",
-      signupForm.email,
-    );
-
-    localStorage.setItem(
-      "userName",
-      `${signupForm.firstName} ${signupForm.lastName}`,
-    );
-
-    if (signupForm.role) {
       localStorage.setItem(
-        "userRole",
-        signupForm.role,
+        "isAuthenticated",
+        "true",
       );
+
+      localStorage.setItem(
+        "userEmail",
+        data.user.email || email,
+      );
+
+      localStorage.setItem(
+        "userName",
+        data.user.username ||
+          username,
+      );
+
+      localStorage.setItem(
+        "access_token",
+        data.access_token,
+      );
+
+      localStorage.setItem(
+        "accessToken",
+        data.access_token,
+      );
+
+      localStorage.setItem(
+        "authToken",
+        data.access_token,
+      );
+
+      localStorage.setItem(
+        "refresh_token",
+        data.refresh_token,
+      );
+
+      /*
+       * The current backend registration
+       * schema stores email, username and
+       * password. Keep organization and the
+       * UI-selected role locally for now.
+       */
+      localStorage.setItem(
+        "userOrganization",
+        signupForm.organization,
+      );
+
+      if (signupForm.role) {
+        localStorage.setItem(
+          "userRole",
+          signupForm.role,
+        );
+      } else if (data.user.role) {
+        localStorage.setItem(
+          "userRole",
+          data.user.role,
+        );
+      } else {
+        localStorage.removeItem(
+          "userRole",
+        );
+      }
+
+      localStorage.removeItem(
+        "userProfileImage",
+      );
+
+      localStorage.removeItem(
+        "oauthUser",
+      );
+
+      localStorage.removeItem(
+        "authProvider",
+      );
+
+      /*
+       * Remove the old local-only signup
+       * cache so it is no longer used as the
+       * source of authentication truth.
+       */
+      localStorage.removeItem(
+        "registeredUsers",
+      );
+
+      setSignupForm({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        organization: "",
+        role: "",
+        agreeTerms: false,
+      });
+
+      navigate(
+        "/afl-dashboard",
+        {
+          replace: true,
+        },
+      );
+    } catch (signupError) {
+      const message =
+        signupError instanceof Error
+          ? signupError.message
+          : "Unable to create account. Please try again.";
+
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
-
-    localStorage.setItem(
-      "access_token",
-      "mock_access_token",
-    );
-
-    localStorage.setItem(
-      "refresh_token",
-      "mock_refresh_token",
-    );
-
-    /* Clear previous OAuth information */
-
-    localStorage.removeItem(
-      "userProfileImage",
-    );
-
-    localStorage.removeItem(
-      "oauthUser",
-    );
-
-    localStorage.removeItem(
-      "authProvider",
-    );
-
-    setSignupForm({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      organization: "",
-      role: "",
-      agreeTerms: false,
-    });
-
-    navigate(
-      "/afl-dashboard",
-      {
-        replace: true,
-      },
-    );
-
-    setIsLoading(false);
   };
 
   /* =========================================================

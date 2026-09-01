@@ -317,7 +317,6 @@ export default function Login() {
 
       if (
         !data.access_token ||
-        !data.refresh_token ||
         !data.user
       ) {
         throw new Error(
@@ -367,10 +366,16 @@ export default function Login() {
         data.access_token,
       );
 
-      localStorage.setItem(
-        "refresh_token",
-        data.refresh_token,
-      );
+      if (data.refresh_token) {
+        localStorage.setItem(
+          "refresh_token",
+          data.refresh_token,
+        );
+      } else {
+        localStorage.removeItem(
+          "refresh_token",
+        );
+      }
 
       if (data.user.username) {
         localStorage.setItem(
@@ -511,7 +516,6 @@ export default function Login() {
 
       if (
         !data.access_token ||
-        !data.refresh_token ||
         !data.user
       ) {
         throw new Error(
@@ -550,10 +554,16 @@ export default function Login() {
         data.access_token,
       );
 
-      localStorage.setItem(
-        "refresh_token",
-        data.refresh_token,
-      );
+      if (data.refresh_token) {
+        localStorage.setItem(
+          "refresh_token",
+          data.refresh_token,
+        );
+      } else {
+        localStorage.removeItem(
+          "refresh_token",
+        );
+      }
 
       /*
        * The current backend registration

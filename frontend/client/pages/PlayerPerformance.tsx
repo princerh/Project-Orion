@@ -302,6 +302,23 @@ export default function PlayerPerformance() {
     );
 
   // =====================================================
+  // USER-SPECIFIC FAVOURITE STORAGE
+  // =====================================================
+
+  const getFavouriteStorageKey = () => {
+    const email =
+      localStorage.getItem("userEmail");
+
+    if (!email) {
+      return null;
+    }
+
+    return `favoritePlayers:${email
+      .trim()
+      .toLowerCase()}`;
+  };
+
+  // =====================================================
   // FAVOURITE PLAYERS
   // =====================================================
 
@@ -549,10 +566,18 @@ export default function PlayerPerformance() {
 
   useEffect(() => {
     try {
+      const favouriteKey =
+        getFavouriteStorageKey();
+
+      if (!favouriteKey) {
+        setFavoritePlayers([]);
+        return;
+      }
+
       const storedFavorites =
         JSON.parse(
           localStorage.getItem(
-            "favoritePlayers",
+            favouriteKey,
           ) ||
             "[]",
         );
@@ -938,6 +963,16 @@ export default function PlayerPerformance() {
       // Prevent heart click from selecting player card
       event.stopPropagation();
 
+      const favouriteKey =
+        getFavouriteStorageKey();
+
+      if (!favouriteKey) {
+        console.error(
+          "Cannot save favourites: no logged-in user email found.",
+        );
+        return;
+      }
+
       const alreadyFavorite =
         isFavoritePlayer(
           player.id,
@@ -962,7 +997,7 @@ export default function PlayerPerformance() {
       );
 
       localStorage.setItem(
-        "favoritePlayers",
+        favouriteKey,
         JSON.stringify(
           updatedFavorites,
         ),
@@ -1083,12 +1118,17 @@ export default function PlayerPerformance() {
           updatedFavorites,
         );
 
-        localStorage.setItem(
-          "favoritePlayers",
-          JSON.stringify(
-            updatedFavorites,
-          ),
-        );
+        const favouriteKey =
+          getFavouriteStorageKey();
+
+        if (favouriteKey) {
+          localStorage.setItem(
+            favouriteKey,
+            JSON.stringify(
+              updatedFavorites,
+            ),
+          );
+        }
       } catch (
         error
       ) {

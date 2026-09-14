@@ -46,6 +46,23 @@ export default function Profile() {
     useState<string | null>(null);
 
   // =====================================================
+  // USER-SPECIFIC FAVOURITE STORAGE
+  // =====================================================
+
+  const getFavouriteStorageKey = (userEmail?: string) => {
+    const resolvedEmail =
+      userEmail || localStorage.getItem("userEmail") || "";
+
+    if (!resolvedEmail.trim()) {
+      return null;
+    }
+
+    return `favoritePlayers:${resolvedEmail
+      .trim()
+      .toLowerCase()}`;
+  };
+
+  // =====================================================
   // FAVOURITE PLAYERS STATE
   // =====================================================
 
@@ -72,19 +89,53 @@ export default function Profile() {
     const storedImage =
       localStorage.getItem("userProfileImage");
 
+    const storedOAuthUser =
+      localStorage.getItem("oauthUser");
+
+    let oauthProfileImage: string | null =
+      null;
+
+    if (storedOAuthUser) {
+      try {
+        const parsedOAuthUser =
+          JSON.parse(storedOAuthUser);
+
+        oauthProfileImage =
+          parsedOAuthUser?.picture ||
+          parsedOAuthUser?.photo ||
+          parsedOAuthUser?.avatar ||
+          null;
+      } catch (error) {
+        console.error(
+          "Failed to parse OAuth user:",
+          error
+        );
+      }
+    }
+
     setName(storedName);
     setDob(storedDob);
     setEmail(storedEmail);
     setRole(storedRole);
 
-    if (storedImage) {
-      setProfileImage(storedImage);
-    }
+    setProfileImage(
+      storedImage ||
+      oauthProfileImage ||
+      null
+    );
 
-    // Load favourite players
+    // Load favourites belonging only to the current logged-in user.
     try {
+      const favouriteKey =
+        getFavouriteStorageKey(storedEmail);
+
+      if (!favouriteKey) {
+        setFavoritePlayers([]);
+        return;
+      }
+
       const storedFavorites = JSON.parse(
-        localStorage.getItem("favoritePlayers") || "[]"
+        localStorage.getItem(favouriteKey) || "[]"
       );
 
       setFavoritePlayers(
@@ -162,10 +213,15 @@ export default function Profile() {
 
     setFavoritePlayers(updatedFavorites);
 
-    localStorage.setItem(
-      "favoritePlayers",
-      JSON.stringify(updatedFavorites)
-    );
+    const favouriteKey =
+      getFavouriteStorageKey(email);
+
+    if (favouriteKey) {
+      localStorage.setItem(
+        favouriteKey,
+        JSON.stringify(updatedFavorites)
+      );
+    }
   };
 
   // =====================================================

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useMsal } from "@azure/msal-react";
 import { Button } from "@/components/ui/button";
 
 import {
@@ -56,6 +57,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { BACKEND_URL } from "@/lib/config";
+import { microsoftLoginRequest } from "@/lib/microsoftAuth";
 
 /* =========================================================
    AUTH HEADERS
@@ -77,6 +79,7 @@ export const getAuthHeaders = () => {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { instance } = useMsal();
 
   const [showPassword, setShowPassword] =
     useState(false);
@@ -656,17 +659,191 @@ export default function Login() {
   };
 
   /* =========================================================
-     GOOGLE / APPLE OAUTH
+     GOOGLE / MICROSOFT OAUTH
   ========================================================= */
 
   const handleGoogleAuth = () => {
-     window.location.href =
-    `${BACKEND_URL}/auth/google`;
-    };
-
-  const handleAppleAuth = () => {
     window.location.href =
-      "/api/auth/apple";
+      `${BACKEND_URL}/auth/google`;
+  };
+
+  const handleMicrosoftAuth = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const microsoftResult =
+        await instance.loginPopup(
+          microsoftLoginRequest,
+        );
+
+      if (!microsoftResult.idToken) {
+        throw new Error(
+          "Microsoft did not return an ID token.",
+        );
+      }
+
+      const response = await fetch(
+        `${BACKEND_URL}/auth/microsoft`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            id_token:
+              microsoftResult.idToken,
+          }),
+        },
+      );
+
+      let data: any = {};
+
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+            data.message ||
+            "Microsoft authentication failed.",
+        );
+      }
+
+      if (
+        !data.access_token ||
+        !data.user
+      ) {
+        throw new Error(
+          "The server returned an incomplete Microsoft authentication response.",
+        );
+      }
+
+      localStorage.setItem(
+        "isAuthenticated",
+        "true",
+      );
+
+      localStorage.setItem(
+        "access_token",
+        data.access_token,
+      );
+
+      localStorage.setItem(
+        "accessToken",
+        data.access_token,
+      );
+
+      localStorage.setItem(
+        "authToken",
+        data.access_token,
+      );
+
+      if (data.refresh_token) {
+        localStorage.setItem(
+          "refresh_token",
+          data.refresh_token,
+        );
+      } else {
+        localStorage.removeItem(
+          "refresh_token",
+        );
+      }
+
+      const account =
+        microsoftResult.account;
+
+      const email =
+        data.user.email ||
+        account?.username ||
+        "";
+
+      const name =
+        data.user.username ||
+        data.user.name ||
+        account?.name ||
+        email;
+
+      localStorage.setItem(
+        "userEmail",
+        email,
+      );
+
+      localStorage.setItem(
+        "userName",
+        name,
+      );
+
+      localStorage.setItem(
+        "authProvider",
+        "microsoft",
+      );
+
+      const oauthUser = {
+        ...data.user,
+        name,
+        email,
+        provider: "microsoft",
+        microsoftAccountId:
+          account?.homeAccountId || "",
+      };
+
+      localStorage.setItem(
+        "oauthUser",
+        JSON.stringify(oauthUser),
+      );
+
+      if (data.user.picture) {
+        localStorage.setItem(
+          "userProfileImage",
+          data.user.picture,
+        );
+      } else {
+        localStorage.removeItem(
+          "userProfileImage",
+        );
+      }
+
+      if (data.user.role) {
+        localStorage.setItem(
+          "userRole",
+          data.user.role,
+        );
+      }
+
+      navigate(
+        "/afl-dashboard",
+        {
+          replace: true,
+        },
+      );
+    } catch (microsoftError: any) {
+      console.error(
+        "Microsoft login failed:",
+        microsoftError,
+      );
+
+      if (
+        microsoftError?.errorCode ===
+        "user_cancelled"
+      ) {
+        setError("");
+        return;
+      }
+
+      const message =
+        microsoftError instanceof Error
+          ? microsoftError.message
+          : "Unable to sign in with Microsoft. Please try again.";
+
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   /* =========================================================
@@ -1261,26 +1438,30 @@ export default function Login() {
 
                         </Button>
 
-                        {/* Apple */}
+                        {/* Microsoft */}
 
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full relative bg-black text-white hover:bg-gray-800"
+                          className="w-full relative"
                           onClick={
-                            handleAppleAuth
+                            handleMicrosoftAuth
                           }
+                          disabled={isLoading}
                         >
 
                           <svg
                             className="w-4 h-4 mr-2"
                             viewBox="0 0 24 24"
-                            fill="currentColor"
+                            aria-hidden="true"
                           >
-                            <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
+                            <rect x="2" y="2" width="9" height="9" fill="#F25022" />
+                            <rect x="13" y="2" width="9" height="9" fill="#7FBA00" />
+                            <rect x="2" y="13" width="9" height="9" fill="#00A4EF" />
+                            <rect x="13" y="13" width="9" height="9" fill="#FFB900" />
                           </svg>
 
-                          Continue with Apple
+                          Continue with Microsoft
 
                         </Button>
 
@@ -1532,26 +1713,30 @@ export default function Login() {
 
                         </Button>
 
-                        {/* Apple */}
+                        {/* Microsoft */}
 
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full relative bg-black text-white hover:bg-gray-800"
+                          className="w-full relative"
                           onClick={
-                            handleAppleAuth
+                            handleMicrosoftAuth
                           }
+                          disabled={isLoading}
                         >
 
                           <svg
                             className="w-4 h-4 mr-2"
                             viewBox="0 0 24 24"
-                            fill="currentColor"
+                            aria-hidden="true"
                           >
-                            <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
+                            <rect x="2" y="2" width="9" height="9" fill="#F25022" />
+                            <rect x="13" y="2" width="9" height="9" fill="#7FBA00" />
+                            <rect x="2" y="13" width="9" height="9" fill="#00A4EF" />
+                            <rect x="13" y="13" width="9" height="9" fill="#FFB900" />
                           </svg>
 
-                          Sign up with Apple
+                          Sign up with Microsoft
 
                         </Button>
 

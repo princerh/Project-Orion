@@ -73,482 +73,79 @@ import {
   Eye,
   Star,
   Heart,
+  Trash2,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 
 // =====================================================
-// PLAYER DATA
+// DATABASE PLAYER TYPES
 // =====================================================
 
-const generatePlayerData = () => {
-  const teams = [
-    "Western Bulldogs",
-    "Richmond",
-    "Geelong",
-    "Melbourne",
-    "Carlton",
-    "Adelaide",
-    "West Coast",
-    "Collingwood",
-    "Essendon",
-    "Fremantle",
-    "Brisbane",
-    "Sydney",
-    "St Kilda",
-    "Port Adelaide",
-    "North Melbourne",
-    "Gold Coast",
-    "GWS Giants",
-    "Hawthorn",
-  ];
+interface DatabasePlayer {
+  id: number;
+  name: string;
+  team: string;
+  position: string;
+  photo?: string | null;
+  kicks: number;
+  handballs: number;
+  marks: number;
+  tackles: number;
+  goals: number;
+  efficiency: number;
+  age: number;
+  height?: string | null;
+  weight?: string | null;
+  jersey_number: number;
+  inside50s: number;
+  disposals: number;
+  team_logo?: string | null;
+  notes?: string | null;
+}
 
-  const positions = [
-    "Midfielder",
-    "Forward",
-    "Defender",
-    "Ruckman",
-  ];
-
-  const players = [
-    {
-      id: 1,
-      name: "Marcus Bontempelli",
-      team: "Western Bulldogs",
-      position: "Midfielder",
-      number: 4,
-      age: 28,
-      height: "1.93m",
-      weight: "92kg",
-      photo: "/image.png",
-
-      stats: {
-        kicks: 28,
-        handballs: 12,
-        disposals: 40,
-        marks: 8,
-        tackles: 6,
-        goals: 2,
-        behinds: 1,
-        efficiency: 87,
-        contested: 18,
-        uncontested: 22,
-        clangers: 3,
-        inside50s: 7,
-        rebounds: 4,
-        onePercenters: 2,
-        turnovers: 4,
-        intercepted: 2,
-        goalAccuracy: 67,
-        avgSpeed: 24.8,
-        maxSpeed: 32.4,
-        distance: 12.8,
-      },
-
-      form: [
-        85,
-        89,
-        91,
-        87,
-        93,
-        88,
-        87,
-        90,
-        85,
-        92,
-      ],
-
-      heatMap: [
-        {
-          zone: "Forward 50",
-          touches: 12,
-          effectiveness: 85,
-        },
-        {
-          zone: "Center Bounce",
-          touches: 18,
-          effectiveness: 92,
-        },
-        {
-          zone: "Defensive 50",
-          touches: 10,
-          effectiveness: 78,
-        },
-      ],
-
-      possessionData: [
-        {
-          time: 0,
-          possession: 12,
-        },
-        {
-          time: 5,
-          possession: 8,
-        },
-        {
-          time: 10,
-          possession: 15,
-        },
-        {
-          time: 15,
-          possession: 20,
-        },
-        {
-          time: 20,
-          possession: 18,
-        },
-        {
-          time: 25,
-          possession: 22,
-        },
-        {
-          time: 30,
-          possession: 25,
-        },
-      ],
-    },
-
-    {
-      id: 2,
-      name: "Dayne Zorko",
-      team: "Brisbane",
-      position: "Midfielder",
-      number: 5,
-      age: 35,
-      height: "1.78m",
-      weight: "78kg",
-      photo: "/image.png",
-
-      stats: {
-        kicks: 31,
-        handballs: 14,
-        disposals: 45,
-        marks: 9,
-        tackles: 7,
-        goals: 3,
-        behinds: 2,
-        efficiency: 89,
-        contested: 20,
-        uncontested: 25,
-        clangers: 2,
-        inside50s: 8,
-        rebounds: 5,
-        onePercenters: 1,
-        turnovers: 3,
-        intercepted: 1,
-        goalAccuracy: 75,
-        avgSpeed: 26.2,
-        maxSpeed: 33.1,
-        distance: 13.5,
-      },
-
-      form: [
-        92,
-        85,
-        88,
-        94,
-        91,
-        89,
-        93,
-        87,
-        90,
-        95,
-      ],
-
-      heatMap: [
-        {
-          zone: "Forward 50",
-          touches: 15,
-          effectiveness: 88,
-        },
-        {
-          zone: "Center Bounce",
-          touches: 22,
-          effectiveness: 90,
-        },
-        {
-          zone: "Defensive 50",
-          touches: 8,
-          effectiveness: 85,
-        },
-      ],
-
-      possessionData: [
-        {
-          time: 0,
-          possession: 8,
-        },
-        {
-          time: 5,
-          possession: 12,
-        },
-        {
-          time: 10,
-          possession: 18,
-        },
-        {
-          time: 15,
-          possession: 20,
-        },
-        {
-          time: 20,
-          possession: 23,
-        },
-        {
-          time: 25,
-          possession: 26,
-        },
-        {
-          time: 30,
-          possession: 30,
-        },
-      ],
-    },
-
-    ...Array.from(
-      {
-        length: 16,
-      },
-      (_, i) => ({
-        id: i + 3,
-        name: `Player ${i + 3}`,
-        team:
-          teams[
-            i %
-              teams.length
-          ],
-        position:
-          positions[
-            i %
-              positions.length
-          ],
-        number:
-          (i % 50) + 1,
-
-        age:
-          Math.floor(
-            Math.random() *
-              15,
-          ) + 20,
-
-        height: `1.${
-          Math.floor(
-            Math.random() *
-              30,
-          ) + 70
-        }m`,
-
-        weight: `${
-          Math.floor(
-            Math.random() *
-              30,
-          ) + 75
-        }kg`,
-
-        photo: "/image.png",
-
-        stats: {
-          kicks:
-            Math.floor(
-              Math.random() *
-                20,
-            ) + 15,
-
-          handballs:
-            Math.floor(
-              Math.random() *
-                15,
-            ) + 5,
-
-          disposals:
-            Math.floor(
-              Math.random() *
-                30,
-            ) + 25,
-
-          marks:
-            Math.floor(
-              Math.random() *
-                10,
-            ) + 3,
-
-          tackles:
-            Math.floor(
-              Math.random() *
-                8,
-            ) + 2,
-
-          goals:
-            Math.floor(
-              Math.random() *
-                5,
-            ),
-
-          behinds:
-            Math.floor(
-              Math.random() *
-                3,
-            ),
-
-          efficiency:
-            Math.floor(
-              Math.random() *
-                25,
-            ) + 70,
-
-          contested:
-            Math.floor(
-              Math.random() *
-                15,
-            ) + 10,
-
-          uncontested:
-            Math.floor(
-              Math.random() *
-                20,
-            ) + 15,
-
-          clangers:
-            Math.floor(
-              Math.random() *
-                5,
-            ) + 1,
-
-          inside50s:
-            Math.floor(
-              Math.random() *
-                8,
-            ) + 2,
-
-          rebounds:
-            Math.floor(
-              Math.random() *
-                6,
-            ) + 1,
-
-          onePercenters:
-            Math.floor(
-              Math.random() *
-                5,
-            ) + 1,
-
-          turnovers:
-            Math.floor(
-              Math.random() *
-                6,
-            ) + 2,
-
-          intercepted:
-            Math.floor(
-              Math.random() *
-                3,
-            ) + 1,
-
-          goalAccuracy:
-            Math.floor(
-              Math.random() *
-                40,
-            ) + 60,
-
-          avgSpeed:
-            Math.random() *
-              10 +
-            20,
-
-          maxSpeed:
-            Math.random() *
-              10 +
-            28,
-
-          distance:
-            Math.random() *
-              5 +
-            10,
-        },
-
-        form:
-          Array.from(
-            {
-              length: 10,
-            },
-            () =>
-              Math.floor(
-                Math.random() *
-                  25,
-              ) + 75,
-          ),
-
-        heatMap: [
-          {
-            zone:
-              "Forward 50",
-            touches:
-              Math.floor(
-                Math.random() *
-                  15,
-              ) + 5,
-            effectiveness:
-              Math.floor(
-                Math.random() *
-                  20,
-              ) + 75,
-          },
-
-          {
-            zone:
-              "Center Bounce",
-            touches:
-              Math.floor(
-                Math.random() *
-                  20,
-              ) + 10,
-            effectiveness:
-              Math.floor(
-                Math.random() *
-                  20,
-              ) + 75,
-          },
-
-          {
-            zone:
-              "Defensive 50",
-            touches:
-              Math.floor(
-                Math.random() *
-                  12,
-              ) + 3,
-            effectiveness:
-              Math.floor(
-                Math.random() *
-                  20,
-              ) + 75,
-          },
-        ],
-
-        possessionData:
-          Array.from(
-            {
-              length: 7,
-            },
-            (_, j) => ({
-              time:
-                j * 5,
-
-              possession:
-                Math.floor(
-                  Math.random() *
-                    20,
-                ) +
-                5 +
-                j * 2,
-            }),
-          ),
-      }),
-    ),
-  ];
-
-  return players;
-};
+// Convert PlayerResponse from the backend into the shape used by the
+// existing Player Performance UI. No player records are hard-coded here.
+const normalizePlayer = (player: DatabasePlayer) => ({
+  id: player.id,
+  name: player.name,
+  team: player.team,
+  position: player.position,
+  number: player.jersey_number ?? 0,
+  age: player.age ?? 0,
+  height: player.height || "-",
+  weight: player.weight || "-",
+  photo: player.photo || null,
+  teamLogo: player.team_logo || null,
+  notes: player.notes || "",
+  stats: {
+    kicks: player.kicks ?? 0,
+    handballs: player.handballs ?? 0,
+    disposals: player.disposals ?? 0,
+    marks: player.marks ?? 0,
+    tackles: player.tackles ?? 0,
+    goals: player.goals ?? 0,
+    behinds: 0,
+    efficiency: player.efficiency ?? 0,
+    contested: 0,
+    uncontested: 0,
+    clangers: 0,
+    inside50s: player.inside50s ?? 0,
+    rebounds: 0,
+    onePercenters: 0,
+    turnovers: 0,
+    intercepted: 0,
+    goalAccuracy: 0,
+    avgSpeed: 0,
+    maxSpeed: 0,
+    distance: 0,
+  },
+  // These historical/advanced datasets are not present in the current
+  // Player database model, so they stay empty instead of being invented.
+  form: [],
+  heatMap: [],
+  possessionData: [],
+});
 
 // =====================================================
 // COMPONENT
@@ -662,9 +259,9 @@ export default function PlayerPerformance() {
     >([]);
 
   const token =
-    localStorage.getItem(
-      "token",
-    );
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("authToken");
 
   const [
     jobStatus,
@@ -683,6 +280,26 @@ export default function PlayerPerformance() {
     setJobError,
   ] =
     useState("");
+
+  const [
+    playersLoading,
+    setPlayersLoading,
+  ] =
+    useState(true);
+
+  const [
+    playersError,
+    setPlayersError,
+  ] =
+    useState("");
+
+  const [
+    deletingPlayerId,
+    setDeletingPlayerId,
+  ] =
+    useState<number | null>(
+      null,
+    );
 
   // =====================================================
   // FAVOURITE PLAYERS
@@ -823,13 +440,107 @@ export default function PlayerPerformance() {
     };
 
   // =====================================================
-  // LOAD PLAYERS
+  // LOAD PLAYERS FROM DATABASE
   // =====================================================
 
+  const loadPlayers =
+    async () => {
+      setPlayersLoading(
+        true,
+      );
+      setPlayersError(
+        "",
+      );
+
+      try {
+        const response =
+          await fetch(
+            `${BACKEND_URL}/api/players`,
+            {
+              method:
+                "GET",
+              headers: {
+                Accept:
+                  "application/json",
+                ...(token
+                  ? {
+                      Authorization:
+                        `Bearer ${token}`,
+                    }
+                  : {}),
+              },
+            },
+          );
+
+        const data =
+          await response
+            .json()
+            .catch(
+              () => null,
+            );
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            data?.detail ||
+              data?.message ||
+              `Failed to fetch players (${response.status})`,
+          );
+        }
+
+        if (
+          !Array.isArray(
+            data,
+          )
+        ) {
+          throw new Error(
+            "Invalid player response received from server.",
+          );
+        }
+
+        const databasePlayers =
+          data.map(
+            (
+              player: DatabasePlayer,
+            ) =>
+              normalizePlayer(
+                player,
+              ),
+          );
+
+        // Database is the only source of player records.
+        setPlayers(
+          databasePlayers,
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "PLAYER DATABASE ERROR:",
+          error,
+        );
+
+        // Never fall back to hard-coded/generated players.
+        setPlayers(
+          [],
+        );
+
+        setPlayersError(
+          error instanceof
+            Error
+            ? error.message
+            : "Unable to load players from database.",
+        );
+      } finally {
+        setPlayersLoading(
+          false,
+        );
+      }
+    };
+
   useEffect(() => {
-    setPlayers(
-      generatePlayerData(),
-    );
+    loadPlayers();
   }, []);
 
   // =====================================================
@@ -868,7 +579,7 @@ export default function PlayerPerformance() {
   }, []);
 
   // =====================================================
-  // INITIAL PLAYER
+  // INITIAL / REFRESHED PLAYER SELECTION
   // =====================================================
 
   useEffect(() => {
@@ -877,91 +588,149 @@ export default function PlayerPerformance() {
       0
     ) {
       setSelectedPlayer(
-        players[0],
+        (current: any) =>
+          players.find(
+            (player) =>
+              player.id ===
+              current?.id,
+          ) ||
+          players[0],
       );
 
       setComparisonPlayer(
-        players[1] ||
+        (current: any) =>
+          players.find(
+            (player) =>
+              player.id ===
+              current?.id,
+          ) ||
+          players[1] ||
           players[0],
+      );
+    } else {
+      setSelectedPlayer(
+        null,
+      );
+      setComparisonPlayer(
+        null,
       );
     }
   }, [players]);
 
   // =====================================================
-  // LIVE SIMULATION
+  // LIVE DISPLAY STATE
   // =====================================================
 
-  useEffect(() => {
-    if (
-      !isLive ||
-      !isPlaying
-    ) {
-      return;
-    }
-
-    const interval =
-      setInterval(
-        () => {
-          setPlayers(
-            (
-              prevPlayers,
-            ) =>
-              prevPlayers.map(
-                (
-                  player,
-                ) => ({
-                  ...player,
-
-                  stats:
-                    {
-                      ...player.stats,
-
-                      disposals:
-                        player
-                          .stats
-                          .disposals +
-                        Math.floor(
-                          Math.random() *
-                            2,
-                        ),
-
-                      efficiency:
-                        Math.max(
-                          60,
-                          Math.min(
-                            95,
-                            player
-                              .stats
-                              .efficiency +
-                              (Math.random() -
-                                0.5) *
-                                2,
-                          ),
-                        ),
-                    },
-                }),
-              ),
-          );
-        },
-        3000,
-      );
-
-    return () =>
-      clearInterval(
-        interval,
-      );
-  }, [
-    isLive,
-    isPlaying,
-  ]);
+  // Player statistics are not randomly simulated here. Player values shown
+  // on this page come from the database. The existing live controls are kept
+  // in the UI for future real-time service integration.
 
   if (
+    playersLoading
+  ) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <MobileNavigation />
+
+        <div className="lg:ml-64 p-6">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <RefreshCw className="mx-auto mb-4 h-6 w-6 animate-spin text-blue-600" />
+
+              <p className="font-medium">
+                Loading players from database...
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    playersError
+  ) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <MobileNavigation />
+
+        <div className="lg:ml-64 p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Unable to load players
+              </CardTitle>
+
+              <CardDescription>
+                Player information could not be retrieved from the database.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <p className="text-sm text-red-600">
+                {playersError}
+              </p>
+
+              <Button
+                onClick={
+                  loadPlayers
+                }
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    players.length ===
+      0 ||
     !selectedPlayer
   ) {
     return (
-      <div className="p-6">
-        Loading player
-        data...
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <MobileNavigation />
+
+        <div className="lg:ml-64 p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                No Players
+              </CardTitle>
+
+              <CardDescription>
+                There are currently no players stored in the database.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex gap-3">
+              <Button
+                onClick={() =>
+                  navigate(
+                    "/add-player",
+                  )
+                }
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Add Player
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={
+                  loadPlayers
+                }
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -1198,6 +967,147 @@ export default function PlayerPerformance() {
           updatedFavorites,
         ),
       );
+    };
+
+  // =====================================================
+  // DELETE PLAYER FROM DATABASE
+  // =====================================================
+
+  const handleDeletePlayer =
+    async (
+      event: React.MouseEvent<HTMLButtonElement>,
+      player: any,
+    ) => {
+      // Prevent delete click from selecting the player card.
+      event.stopPropagation();
+
+      const confirmed =
+        window.confirm(
+          `Delete ${player.name}? This will permanently remove the player from the database.`,
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setDeletingPlayerId(
+        player.id,
+      );
+      setPlayersError(
+        "",
+      );
+
+      try {
+        const response =
+          await fetch(
+            `${BACKEND_URL}/api/player/${player.id}`,
+            {
+              method:
+                "DELETE",
+              headers: {
+                Accept:
+                  "application/json",
+                ...(token
+                  ? {
+                      Authorization:
+                        `Bearer ${token}`,
+                    }
+                  : {}),
+              },
+            },
+          );
+
+        const data =
+          await response
+            .json()
+            .catch(
+              () => null,
+            );
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            data?.detail ||
+              data?.message ||
+              `Failed to delete player (${response.status})`,
+          );
+        }
+
+        const remainingPlayers =
+          players.filter(
+            (
+              existingPlayer,
+            ) =>
+              existingPlayer.id !==
+              player.id,
+          );
+
+        setPlayers(
+          remainingPlayers,
+        );
+
+        // If the deleted player is currently selected, select the first remaining player.
+        if (
+          selectedPlayer?.id ===
+          player.id
+        ) {
+          setSelectedPlayer(
+            remainingPlayers[0] ??
+              null,
+          );
+        }
+
+        // Keep comparison selection valid after deletion.
+        if (
+          comparisonPlayer?.id ===
+          player.id
+        ) {
+          setComparisonPlayer(
+            remainingPlayers[0] ??
+              null,
+          );
+        }
+
+        // Remove deleted player from favourites too.
+        const updatedFavorites =
+          favoritePlayers.filter(
+            (
+              favorite,
+            ) =>
+              favorite.id !==
+              player.id,
+          );
+
+        setFavoritePlayers(
+          updatedFavorites,
+        );
+
+        localStorage.setItem(
+          "favoritePlayers",
+          JSON.stringify(
+            updatedFavorites,
+          ),
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "PLAYER DELETE ERROR:",
+          error,
+        );
+
+        setPlayersError(
+          error instanceof
+            Error
+            ? error.message
+            : "Unable to delete player.",
+        );
+      } finally {
+        setDeletingPlayerId(
+          null,
+        );
+      }
     };
 
   // =====================================================
@@ -1470,9 +1380,12 @@ export default function PlayerPerformance() {
           <div className="absolute top-4 left-4 flex items-start gap-3 text-white">
             <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
               <img
-                src={getTeamLogo(
-                  player.team,
-                )}
+                src={
+                  player.teamLogo ||
+                  getTeamLogo(
+                    player.team,
+                  )
+                }
                 alt={`${player.team} logo`}
                 className="w-10 h-10 object-cover scale-110"
                 onError={(
@@ -1563,43 +1476,66 @@ export default function PlayerPerformance() {
               </p>
             </div>
 
-            {/* Favourite Button */}
-            <button
-              type="button"
-              onClick={(
-                event,
-              ) =>
-                toggleFavoritePlayer(
+            {/* Player Actions */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(
                   event,
-                  player,
-                )
-              }
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:bg-red-50"
-              aria-label={
-                isFavoritePlayer(
-                  player.id,
-                )
-                  ? `Remove ${player.name} from favourites`
-                  : `Add ${player.name} to favourites`
-              }
-              title={
-                isFavoritePlayer(
-                  player.id,
-                )
-                  ? "Remove from favourites"
-                  : "Add to favourites"
-              }
-            >
-              <Heart
-                className={`h-5 w-5 transition-all duration-200 ${
+                ) =>
+                  handleDeletePlayer(
+                    event,
+                    player,
+                  )
+                }
+                disabled={
+                  deletingPlayerId ===
+                  player.id
+                }
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={`Delete ${player.name}`}
+                title="Delete player"
+              >
+                <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-600" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(
+                  event,
+                ) =>
+                  toggleFavoritePlayer(
+                    event,
+                    player,
+                  )
+                }
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:bg-red-50"
+                aria-label={
                   isFavoritePlayer(
                     player.id,
                   )
-                    ? "fill-red-500 text-red-500"
-                    : "text-gray-400 hover:text-red-500"
-                }`}
-              />
-            </button>
+                    ? `Remove ${player.name} from favourites`
+                    : `Add ${player.name} to favourites`
+                }
+                title={
+                  isFavoritePlayer(
+                    player.id,
+                  )
+                    ? "Remove from favourites"
+                    : "Add to favourites"
+                }
+              >
+                <Heart
+                  className={`h-5 w-5 transition-all duration-200 ${
+                    isFavoritePlayer(
+                      player.id,
+                    )
+                      ? "fill-red-500 text-red-500"
+                      : "text-gray-400 hover:text-red-500"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Stats */}

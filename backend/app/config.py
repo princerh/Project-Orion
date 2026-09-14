@@ -140,6 +140,7 @@ FRONTEND_URL = os.getenv(
     "http://localhost:8081",
 )
 
+
 # =========================================================
 # GOOGLE OAUTH
 # =========================================================
@@ -157,4 +158,40 @@ GOOGLE_CLIENT_SECRET = os.getenv(
 GOOGLE_CALLBACK_URL = os.getenv(
     "GOOGLE_CALLBACK_URL",
     "http://localhost:8000/auth/google/callback",
+)
+
+
+# =========================================================
+# MICROSOFT OAUTH / ENTRA ID
+# =========================================================
+
+MICROSOFT_CLIENT_ID = os.getenv(
+    "MICROSOFT_CLIENT_ID",
+    "",
+)
+
+# "common" allows:
+# - Microsoft personal accounts
+# - Work/school Microsoft accounts
+#
+# This matches the account type selected in Microsoft Entra.
+
+MICROSOFT_TENANT_ID = os.getenv(
+    "MICROSOFT_TENANT_ID",
+    "common",
+)
+
+MICROSOFT_AUTHORITY = os.getenv(
+    "MICROSOFT_AUTHORITY",
+    f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}",
+)
+
+MICROSOFT_OPENID_CONFIG_URL = os.getenv(
+    "MICROSOFT_OPENID_CONFIG_URL",
+    f"{MICROSOFT_AUTHORITY}/v2.0/.well-known/openid-configuration",
+)
+
+MICROSOFT_JWKS_URL = os.getenv(
+    "MICROSOFT_JWKS_URL",
+    "https://login.microsoftonline.com/common/discovery/v2.0/keys",
 )

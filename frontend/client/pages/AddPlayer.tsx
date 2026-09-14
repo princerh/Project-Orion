@@ -110,7 +110,7 @@ export default function AddPlayer() {
     setIsSaving(true);
 
     try {
-      await apiRequest(`${BACKEND_URL}/players`, {
+      await apiRequest(`${BACKEND_URL}/api/player`, {
         method: "POST",
         body: JSON.stringify({
           name: formData.name,
@@ -138,7 +138,7 @@ export default function AddPlayer() {
       console.log("Player added successfully");
 
       setTimeout(() => {
-        navigate("/afl-dashboard");
+        navigate("/player-performance");
       }, 800);
     } catch (err: any) {
       setErrorMessage(err.message || "Unable to save player.");

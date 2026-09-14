@@ -4,6 +4,9 @@ import secrets
 from urllib.parse import urlencode
 
 import httpx
+import jwt as pyjwt
+from jwt import PyJWKClient
+from pydantic import BaseModel
 
 from fastapi import (
     APIRouter,
@@ -40,10 +43,147 @@ from app.config import (
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     GOOGLE_CALLBACK_URL,
+    MICROSOFT_CLIENT_ID,
+    MICROSOFT_JWKS_URL,
 )
 
 
 router = APIRouter()
+
+
+# =========================================================
+# MICROSOFT REQUEST MODEL
+# =========================================================
+
+class MicrosoftAuthRequest(BaseModel):
+    id_token: str
+
+
+# =========================================================
+# MICROSOFT ID TOKEN VERIFICATION
+# =========================================================
+
+def _verify_microsoft_id_token(
+    id_token: str,
+) -> dict:
+    """
+    Verify a Microsoft Entra ID / Microsoft account
+    v2.0 ID token using Microsoft's public signing keys.
+
+    The unverified payload is read only to obtain the
+    tenant ID needed to construct the expected issuer.
+    Authentication decisions are made only after full
+    signature, audience, issuer and expiry validation.
+    """
+
+    if not MICROSOFT_CLIENT_ID:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "MICROSOFT_CLIENT_ID "
+                "is not configured"
+            ),
+        )
+
+    try:
+        unverified_claims = pyjwt.decode(
+            id_token,
+            options={
+                "verify_signature": False,
+                "verify_aud": False,
+                "verify_iss": False,
+            },
+        )
+
+        tenant_id = unverified_claims.get(
+            "tid"
+        )
+
+        if not tenant_id:
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "Microsoft token does not "
+                    "contain a tenant ID"
+                ),
+            )
+
+        expected_issuer = (
+            "https://login.microsoftonline.com/"
+            f"{tenant_id}/v2.0"
+        )
+
+        jwks_client = PyJWKClient(
+            MICROSOFT_JWKS_URL,
+            cache_keys=True,
+        )
+
+        signing_key = (
+            jwks_client.get_signing_key_from_jwt(
+                id_token
+            )
+        )
+
+        claims = pyjwt.decode(
+            id_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=MICROSOFT_CLIENT_ID,
+            issuer=expected_issuer,
+            options={
+                "require": [
+                    "exp",
+                    "iat",
+                    "aud",
+                    "iss",
+                    "sub",
+                ]
+            },
+        )
+
+        return claims
+
+    except HTTPException:
+        raise
+
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401,
+            detail="Microsoft ID token has expired",
+        )
+
+    except pyjwt.InvalidAudienceError:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Microsoft ID token has an "
+                "invalid audience"
+            ),
+        )
+
+    except pyjwt.InvalidIssuerError:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Microsoft ID token has an "
+                "invalid issuer"
+            ),
+        )
+
+    except pyjwt.PyJWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Microsoft ID token",
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Unable to verify Microsoft "
+                "ID token"
+            ),
+        )
 
 
 # =========================================================
@@ -209,6 +349,130 @@ def login(
                 "during login"
             ),
         )
+
+
+# =========================================================
+# MICROSOFT OAUTH
+# =========================================================
+
+@router.post(
+    "/microsoft",
+    response_model=AuthResponse,
+)
+async def microsoft_login(
+    body: MicrosoftAuthRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Authenticate a user with a Microsoft ID token
+    obtained by the React/MSAL frontend.
+
+    Existing Project Orion users are matched by email.
+    A new Project Orion user is created automatically
+    when the Microsoft email has not been used before.
+    """
+
+    if not body.id_token.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Microsoft ID token is required",
+        )
+
+    claims = _verify_microsoft_id_token(
+        body.id_token.strip()
+    )
+
+    email = (
+        claims.get("email")
+        or claims.get("preferred_username")
+        or claims.get("upn")
+    )
+
+    if not email:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Microsoft account did not "
+                "return an email address"
+            ),
+        )
+
+    email = str(email).strip().lower()
+
+    display_name = (
+        claims.get("name")
+        or email.split("@")[0]
+    )
+
+    # Microsoft object/account identifier.
+    microsoft_user_id = (
+        claims.get("oid")
+        or claims.get("sub")
+    )
+
+    # Find an existing Project Orion account.
+    db_user = (
+        db.query(User)
+        .filter(
+            User.email == email
+        )
+        .first()
+    )
+
+    # Create a Project Orion account the first time
+    # this Microsoft identity is used.
+    if not db_user:
+        base_username = (
+            str(display_name).strip()
+            or email.split("@")[0]
+        )
+
+        username = base_username
+        counter = 1
+
+        while (
+            db.query(User)
+            .filter(
+                User.username == username
+            )
+            .first()
+        ):
+            username = (
+                f"{base_username}_{counter}"
+            )
+            counter += 1
+
+        # OAuth users do not need a Project Orion
+        # password. The current User model requires
+        # one, so store a strong random unusable value.
+        oauth_password = (
+            secrets.token_urlsafe(48)
+        )
+
+        db_user = User(
+            email=email,
+            username=username,
+            password=hash_password(
+                oauth_password
+            ),
+        )
+
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+    # Issue the same Project Orion access/refresh
+    # tokens used by normal email/password login.
+    auth_data = _issue_tokens(
+        db_user,
+        db,
+    )
+
+    # Keep these values available for logging/debugging
+    # without changing the AuthResponse contract.
+    _ = microsoft_user_id
+
+    return auth_data
 
 
 # =========================================================

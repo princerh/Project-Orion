@@ -82,7 +82,7 @@ import {
   Shield,
 } from "lucide-react";
 import MobileNavigation from "@/components/MobileNavigation";
-import { BACKEND_URL } from "@/lib/config";
+import { BACKEND_URL } from "../lib/config";
 
 type BackendStatusResponse = {
   job_id: string;
@@ -96,71 +96,67 @@ type BackendStatusResponse = {
 };
 
 const getAccessToken = () =>
-  localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+  localStorage.getItem("accessToken") ||
+  localStorage.getItem("access_token") ||
+  localStorage.getItem("authToken");
 
-// Mock data for the dashboard
-const mockPlayers = [
-  {
-    id: 1,
-    name: "Marcus Bontempelli",
-    team: "Western Bulldogs",
-    position: "Midfielder",
-    number: 4,
-    fieldX: 50,
-    fieldY: 49,
-    kicks: 28,
-    handballs: 12,
-    marks: 8,
-    tackles: 6,
-    goals: 2,
-    efficiency: 87,
-  },
-  {
-    id: 2,
-    name: "Dustin Martin",
-    team: "Richmond",
-    position: "Forward",
-    number: 4,
-    fieldX: 73,
-    fieldY: 27,
-    kicks: 22,
-    handballs: 8,
-    marks: 6,
-    tackles: 4,
-    goals: 3,
-    efficiency: 82,
-  },
-  {
-    id: 3,
-    name: "Patrick Dangerfield",
-    team: "Geelong",
-    position: "Midfielder",
-    number: 35,
-    fieldX: 28,
-    fieldY: 42,
-    kicks: 25,
-    handballs: 15,
-    marks: 7,
-    tackles: 8,
-    goals: 1,
-    efficiency: 84,
-  },
-  {
-    id: 4,
-    name: "Max Gawn",
-    team: "Melbourne",
-    position: "Ruckman",
-    number: 11,
-    fieldX: 50,
-    fieldY: 67,
-    kicks: 18,
-    handballs: 6,
-    marks: 10,
-    tackles: 3,
-    goals: 1,
-    efficiency: 78,
-  },
-];
+type DashboardPlayer = {
+  id: number;
+  name: string;
+  team: string;
+  position: string;
+  number: number;
+  fieldX: number;
+  fieldY: number;
+  kicks: number;
+  handballs: number;
+  marks: number;
+  tackles: number;
+  goals: number;
+  efficiency: number;
+};
+
+const getFieldPositionForRole = (position: string) => {
+  const role = position.trim().toLowerCase();
+
+  if (role.includes("forward")) {
+    return { fieldX: 50, fieldY: 24 };
+  }
+
+  if (role.includes("defender") || role.includes("back")) {
+    return { fieldX: 50, fieldY: 76 };
+  }
+
+  if (role.includes("ruck")) {
+    return { fieldX: 50, fieldY: 50 };
+  }
+
+  if (role.includes("mid") || role.includes("wing")) {
+    return { fieldX: 50, fieldY: 50 };
+  }
+
+  return { fieldX: 50, fieldY: 50 };
+};
+
+const normalizeDatabasePlayer = (player: any): DashboardPlayer => {
+  const fieldPosition = getFieldPositionForRole(player.position || "");
+
+  return {
+    id: Number(player.id),
+    name: player.name || "",
+    team: player.team || "",
+    position: player.position || "",
+    number: Number(player.jersey_number ?? player.jerseyNumber ?? 0),
+    fieldX: fieldPosition.fieldX,
+    fieldY: fieldPosition.fieldY,
+    kicks: Number(player.kicks ?? 0),
+    handballs: Number(player.handballs ?? 0),
+    marks: Number(player.marks ?? 0),
+    tackles: Number(player.tackles ?? 0),
+    goals: Number(player.goals ?? 0),
+    efficiency: Number(player.efficiency ?? 0),
+  };
+};
 
 const matchEvents = [
   {
@@ -253,13 +249,66 @@ const BackToTopButton = () => {
 };
 export default function AFLDashboard() {
   const navigate = useNavigate();
-  const [selectedPlayer, setSelectedPlayer] = useState(mockPlayers[0]);
-  const [comparisonPlayer, setComparisonPlayer] = useState(mockPlayers[1]);
+  const [players, setPlayers] = useState<DashboardPlayer[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<DashboardPlayer | null>(null);
+  const [comparisonPlayer, setComparisonPlayer] = useState<DashboardPlayer | null>(null);
+  const [playersLoading, setPlayersLoading] = useState(true);
+  const [playersError, setPlayersError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [isLive, setIsLive] = useState(true);
   const [userEmail, setUserEmail] = useState("");
   const [activeQueueItemId, setActiveQueueItemId] = useState<string | null>(null);
+
+  const loadDatabasePlayers = async () => {
+    setPlayersLoading(true);
+    setPlayersError(null);
+
+    try {
+      const token = getAccessToken();
+
+      const response = await fetch(`${BACKEND_URL}/api/players`, {
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const data = await response.json().catch(() => []);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            data?.message ||
+            `Unable to load players (${response.status})`,
+        );
+      }
+
+      if (!Array.isArray(data)) {
+        throw new Error("Player API returned an unexpected response.");
+      }
+
+      const databasePlayers = data.map(normalizeDatabasePlayer);
+
+      setPlayers(databasePlayers);
+      setSelectedPlayer(databasePlayers[0] ?? null);
+      setComparisonPlayer(databasePlayers[1] ?? databasePlayers[0] ?? null);
+    } catch (error) {
+      console.error("Failed to load database players:", error);
+      setPlayers([]);
+      setSelectedPlayer(null);
+      setComparisonPlayer(null);
+      setPlayersError(
+        error instanceof Error ? error.message : "Unable to load players.",
+      );
+    } finally {
+      setPlayersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadDatabasePlayers();
+  }, []);
 
   // Feature flag to disable live match features
   const ENABLE_LIVE_FEATURES = false;
@@ -1582,7 +1631,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
     downloadText(clipsData, `AFL_Video_Clips_${Date.now()}`);
   };
 
-  const filteredPlayers = mockPlayers.filter(
+  const filteredPlayers = players.filter(
     (player) =>
       player.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedTeam === "all" || player.team === selectedTeam),
@@ -1593,7 +1642,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
   const normalizedPlayerSearch = searchTerm.trim().toLowerCase();
 
   const searchedFieldPlayers = normalizedPlayerSearch
-    ? mockPlayers.filter((player) =>
+    ? players.filter((player) =>
         player.name.toLowerCase().includes(normalizedPlayerSearch),
       )
     : [];
@@ -1698,7 +1747,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
     "
   >
     <BarChart3 className="h-4 w-4 shrink-0" />
-    <span>Player Performance</span>
+    <span>Players &amp; Positions</span>
   </TabsTrigger>
 
   <TabsTrigger
@@ -1778,7 +1827,36 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
 
           {/* Player Performance Tracker */}
           <TabsContent value="performance" className="space-y-6">
-            <div className="flex flex-col lg:flex-row gap-6">
+            {playersLoading ? (
+              <Card>
+                <CardContent className="py-12 text-center text-gray-600">
+                  Loading players from the database...
+                </CardContent>
+              </Card>
+            ) : playersError ? (
+              <Card>
+                <CardContent className="space-y-4 py-12 text-center">
+                  <p className="font-medium text-red-600">
+                    Unable to load database players
+                  </p>
+                  <p className="text-sm text-gray-600">{playersError}</p>
+                  <Button type="button" variant="outline" onClick={loadDatabasePlayers}>
+                    Try Again
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : players.length === 0 || !selectedPlayer || !comparisonPlayer ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="font-medium text-gray-900">No players found</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Add players through the Add Player page. This dashboard only
+                    displays players stored in the database.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="flex flex-col lg:flex-row gap-6">
               {/* Search and Filters */}
               <Card className="lg:w-1/3">
                 <CardHeader>
@@ -1812,12 +1890,14 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Teams</SelectItem>
-                        <SelectItem value="Western Bulldogs">
-                          Western Bulldogs
-                        </SelectItem>
-                        <SelectItem value="Richmond">Richmond</SelectItem>
-                        <SelectItem value="Geelong">Geelong</SelectItem>
-                        <SelectItem value="Melbourne">Melbourne</SelectItem>
+                        {Array.from(new Set(players.map((player) => player.team)))
+                          .filter(Boolean)
+                          .sort()
+                          .map((team) => (
+                            <SelectItem key={team} value={team}>
+                              {team}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1858,10 +1938,10 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                       <div>
                         <CardTitle className="flex items-center gap-2">
                           <MapPin className="h-5 w-5 text-green-600" />
-                          Live Field Position
+                          Player Field Position
                         </CardTitle>
                         <CardDescription className="mt-1">
-                          Search for a player to view and highlight their current
+                          Search for a player to view their primary playing
                           position on the field.
                         </CardDescription>
                       </div>
@@ -2084,7 +2164,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                       <Select
                         value={comparisonPlayer.name}
                         onValueChange={(name) => {
-                          const player = mockPlayers.find(
+                          const player = players.find(
                             (p) => p.name === name,
                           );
                           if (player) setComparisonPlayer(player);
@@ -2094,7 +2174,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                           <SelectValue placeholder="Select player to compare" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockPlayers
+                          {players
                             .filter((p) => p.id !== selectedPlayer.id)
                             .map((player) => (
                               <SelectItem key={player.id} value={player.name}>
@@ -2139,6 +2219,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                                         comparisonPlayer[
                                           stat as keyof typeof comparisonPlayer
                                         ] as number,
+                                        1,
                                       )) *
                                     100
                                   }
@@ -2161,6 +2242,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                                         comparisonPlayer[
                                           stat as keyof typeof comparisonPlayer
                                         ] as number,
+                                        1,
                                       )) *
                                     100
                                   }
@@ -2179,6 +2261,7 @@ Export ID: ${Date.now()}-${Math.random().toString(36).substr(2, 9)}
                 </Card>
               </div>
             </div>
+            )}
           </TabsContent>
 
           {/* Current Match Insights */}
